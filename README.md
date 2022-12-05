@@ -1,5 +1,5 @@
 # Authentication
-A experimental authentication server
+A experimental authentication server following OAuth2
 
 ## About
 I'm using this to prototype and experiment with authentication server.
