@@ -1,4 +1,9 @@
-use std::net::{TcpListener, TcpStream};
+use std::{
+    io::{BufReader, Read},
+    net::{TcpListener},
+};
+
+use auth_server::net::Connection;
 
 const LISTEN_IP_ADDR: &str = "127.0.0.1:1667";
 
@@ -7,12 +12,12 @@ fn main() {
 
     println!("Server online!");
 
-    for (_i, stream) in listener.incoming().enumerate() {
+    for (i, stream) in listener.incoming().enumerate() {
         println!("--------------------");
         println!("Incoming Connection:");
 
-        let stream = stream.unwrap();
-        let peer_addr = stream.peer_addr();
+        let connection = Connection::new(i as u64, stream.unwrap());
+        let peer_addr = connection.peer_addr();
 
         // Print Informations
         println!(
@@ -22,36 +27,38 @@ fn main() {
                 Err(_) => String::from("UNKNOW"),
             }
         );
+        println!(" - ID: {}", connection.id);
         println!("--------------------");
 
         // Handle the connection
         if let Err(_) = peer_addr {
             println!("UNKNOW IP ADDRESS. Possible disconnection. Ignoring...");
-            drop(stream);
+            drop(connection);
             continue;
         }
 
-        handle_connection(stream);
+        handle_connection(connection);
     }
 }
 
-fn handle_connection(stream: TcpStream) {
-    let peer_ipaddr = stream.peer_addr().unwrap().ip();
-    let mut read_buffer = [0; 1024];
-
+fn handle_connection(connection: Connection) {
     loop {
-        match stream.peek(&mut read_buffer) {
+        let mut read_buffer = [0; 1024];
+        let mut reader = BufReader::with_capacity(read_buffer.len(), &*connection);
+
+        match reader.read(&mut read_buffer) {
             Ok(size) => {
-                println!("Data received from {peer_ipaddr}:");
+                println!("Data received from {}:", connection.to_string());
                 println!(" - Size: {size}");
-                println!("{read_buffer:?}");
+                auth_lib::printing::print_buffer(&read_buffer[0..size]);
+                println!();
             }
             Err(e) => {
-                println!("Error from {peer_ipaddr}: ");
+                println!("Error from {}: ", connection.to_string());
                 println!(" - Code: {}", e.kind().to_string());
                 println!(" - Message: {}", e.to_string());
                 println!("Disconnecting...");
-                drop(stream);
+                drop(connection);
                 break;
             }
         }

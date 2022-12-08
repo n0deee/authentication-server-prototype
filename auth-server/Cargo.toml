@@ -7,3 +7,4 @@ edition = "2021"
 
 [dependencies]
 auth-lib = { path = "../auth-lib" }
+component = "0.1.0"
