@@ -1,14 +1,27 @@
+pub mod packets;
+
+pub struct FrameHeader {
+    pub size: u32,
+}
+
 pub struct Frame {
-    size: u32,
-    id: u16,
-    data: Vec<u8>
+    header: FrameHeader,
+    data: Vec<u8>,
 }
 
 impl Frame {
-    pub fn new(id: u16, data: Vec<u8>) -> Frame {
+    pub fn new(data: Vec<u8>) -> Frame {
         let size = data.len() as u32;
-        let d = data.clone();
-        Frame {size, id, data: d}
+        let cloned_data = data;
+        let header = FrameHeader { size };
+
+        Frame {
+            header,
+            data: cloned_data,
+        }
     }
 }
 
+
+#[cfg(test)]
+mod test {}

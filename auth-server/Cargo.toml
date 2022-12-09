@@ -7,4 +7,8 @@ edition = "2021"
 
 [dependencies]
 auth-lib = { path = "../auth-lib" }
-component = "0.1.0"
+serde = { version = "1.0.149", features = ["derive"] }
+bincode = "1.3.3"
+
+[dev-dependencies]
+serde_bytes = "0.11.7"

@@ -1,5 +1,5 @@
 use std::{
-    io::{BufReader, Read},
+    io::{Read},
     net::{TcpListener},
 };
 
@@ -41,12 +41,11 @@ fn main() {
     }
 }
 
-fn handle_connection(connection: Connection) {
+fn handle_connection(mut connection: Connection) {
     loop {
         let mut read_buffer = [0; 1024];
-        let mut reader = BufReader::with_capacity(read_buffer.len(), &*connection);
-
-        match reader.read(&mut read_buffer) {
+ 
+        match connection.read(&mut read_buffer) {
             Ok(size) => {
                 println!("Data received from {}:", connection.to_string());
                 println!(" - Size: {size}");

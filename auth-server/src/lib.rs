@@ -1,5 +1,8 @@
 pub mod net {
-    use std::{net::TcpStream, ops::Deref};
+    use std::{
+        net::TcpStream,
+        ops::{Deref, DerefMut},
+    };
 
     pub struct Connection {
         pub id: u64,
@@ -17,6 +20,12 @@ pub mod net {
 
         fn deref(&self) -> &Self::Target {
             &self.stream
+        }
+    }
+
+    impl DerefMut for Connection {
+        fn deref_mut(&mut self) -> &mut Self::Target {
+            &mut self.stream
         }
     }
 

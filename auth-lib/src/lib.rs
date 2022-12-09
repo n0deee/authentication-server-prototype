@@ -1,2 +1,2 @@
-pub mod printing;
 pub mod net;
+pub mod printing;
