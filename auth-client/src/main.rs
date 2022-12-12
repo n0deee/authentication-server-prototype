@@ -1,4 +1,4 @@
-use auth_lib::net::packets;
+use auth_lib::{net::packets, printing::println_buffer};
 use std::{
     io::{Read, Write},
     net::TcpStream,
@@ -12,12 +12,12 @@ fn main() {
 
     let credentials = packets::Credentials {
         username: String::from("N0de"),
-        password: String::from("p4ssw0rd"),
+        password: String::from("p4ss w0rd"),
     };
 
     let serialized_credentials: Vec<u8> = bincode::serialize(&credentials).unwrap();
-
-    stream.write(&serialized_credentials).unwrap();
+    send(&mut stream, &serialized_credentials);
+    send(&mut stream, &serialized_credentials);
 
     loop {
         let mut read_buffer = [0; 1024];
@@ -25,7 +25,7 @@ fn main() {
             Ok(size) => {
                 println!("Data received from Server:");
                 println!(" - Size: {size}");
-                auth_lib::printing::print_buffer(&read_buffer[0..size]);
+                auth_lib::printing::println_buffer_with_ascii(&read_buffer[..size]);
                 println!();
             }
             Err(e) => {
@@ -38,4 +38,15 @@ fn main() {
             }
         }
     }
+}
+
+fn send(stream: &mut TcpStream, data: &[u8]) {
+    print!("Sending data: ");
+    println_buffer(data);
+    stream.write(&data).unwrap();
+    println!("Sent!");
+}
+
+#[cfg(test)]
+mod test {
 }
