@@ -1,7 +1,10 @@
 use std::{io::Read, io::Write, net::TcpListener};
 
 use auth_lib::net::packets::Credentials;
-use auth_server::net::Connection;
+use auth_server::{
+    net::Connection,
+    test_database::{Token, TokenGuard, TokenPrupose},
+};
 
 const LISTEN_IP_ADDR: &str = "127.0.0.1:1667";
 
@@ -57,12 +60,18 @@ fn handle_connection(mut connection: Connection) {
 
                 // Autentication
                 println!("Authenticating...");
-                let token = auth(credentials).unwrap();
+                let token_guard = auth(credentials).unwrap();
 
                 // Response
-                let decoded_token = bincode::serialize::<String>(&token).unwrap();
-                connection.write(&decoded_token).unwrap();
-                println!("Authenticated!");
+                if let Ok(token) = token_guard.get_token() {
+                    let decoded_token = bincode::serialize::<Token>(&token).unwrap();
+                    connection.write(&decoded_token).unwrap();
+                    println!("Authenticated!");
+                }
+                else {
+                    println!("ERROR: Not Authenticated! Token is invalid!");
+                    connection.write(&[0; 1]).unwrap();
+                }
             }
             Err(e) => {
                 println!("Error from {}: ", connection.to_string());
@@ -76,7 +85,7 @@ fn handle_connection(mut connection: Connection) {
     }
 }
 
-fn auth(credentials: Credentials) -> Result<String, ()> {
+fn auth(credentials: Credentials) -> Result<TokenGuard, ()> {
     use sha2::{Digest, Sha512};
 
     let mut hasher = Sha512::new();
@@ -86,7 +95,14 @@ fn auth(credentials: Credentials) -> Result<String, ()> {
 
     let finalized_hash = hasher.finalize().to_vec();
 
-    let token = base64::encode(finalized_hash);
+    let key = base64::encode(finalized_hash);
+    let token = Token::new(
+        key,
+        TokenPrupose::UserAccess(0),
+        chrono::Utc::now().timestamp_millis(),
+        60_000,
+    );
+    let token_guard = TokenGuard::new(token);
 
-    Ok(token)
+    Ok(token_guard)
 }

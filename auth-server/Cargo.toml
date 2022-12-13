@@ -17,6 +17,8 @@ sha2 = "0.10.6"
 # digest = "0.10.6"
 base64 = "0.13.1"
 
+chrono = "0.4.23"
+
 [dev-dependencies]
 serde_bytes = "0.11.7"
 

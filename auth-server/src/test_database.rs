@@ -1,13 +1,24 @@
 use std::time::{Duration, Instant};
 
-pub type UserID = u64;
+use serde::{Serialize, Deserialize};
 
+pub type UserID = u64;
+pub type TimestampMillis = i64;
+
+#[derive(Serialize, Deserialize)]
 pub enum PermissionLevel {
     No,
     Normal,
     Privileged,
 }
 
+#[derive(Serialize, Deserialize)]
+pub enum TokenPrupose {
+    Nothing,
+    UserAccess(UserID),
+}
+
+#[derive(Serialize, Deserialize)]
 pub struct RegisteredUser {
     id: UserID,
     username: String,
@@ -15,43 +26,46 @@ pub struct RegisteredUser {
     permission_level: PermissionLevel,
 }
 
-pub enum TokenPrupose {
-    Nothing,
-    UserAccess(UserID),
-}
-
+#[derive(Serialize, Deserialize)]
 pub struct Token {
     pub key: String,
     pub prupose: TokenPrupose,
-    pub emission_time: Instant,
-    pub lifespan: Duration,
+    pub emission_time_millis: TimestampMillis,
+    pub lifespan_millis: TimestampMillis,
     invalidated: bool,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct TokenGuard {
+    token: Token
 }
 
 impl Token {
     pub fn new(
         key: String,
         prupose: TokenPrupose,
-        emission_time: Instant,
-        lifespan: Duration,
+        emission_time: TimestampMillis,
+        lifespan: TimestampMillis,
     ) -> Token {
         Token {
             key,
             prupose,
-            lifespan,
-            emission_time,
+            lifespan_millis: lifespan,
+            emission_time_millis: emission_time,
             invalidated: false,
         }
     }
 
     pub fn is_valid(&self) -> bool {
-        let elapsed = self.emission_time.checked_duration_since(Instant::now());
+        // let elapsed = self.emission_time_millis.checked_duration_since(Instant::now());
 
-        let is_time_valid = match elapsed {
-            Some(elapsed) => elapsed >= Duration::from_secs(0) && elapsed < self.lifespan,
-            None => false,
-        };
+        // let is_time_valid = match elapsed {
+        //     Some(elapsed) => elapsed >= Duration::from_secs(0) && elapsed < self.lifespan_millis,
+        //     None => false,
+        // };
+        let elapsed = chrono::Utc::now().timestamp_millis() - self.emission_time_millis;
 
+        let is_time_valid = elapsed >= 0 && elapsed < self.lifespan_millis;
         !self.invalidated_manually() && is_time_valid
     }
 
@@ -61,6 +75,27 @@ impl Token {
 
     pub fn invalidated_manually(&self) -> bool {
         self.invalidated
+    }
+}
+
+impl TokenGuard {
+    pub fn new(token: Token) -> TokenGuard {
+        TokenGuard { token }
+    }
+
+    /// Returns Ok() if the token is valid and Err() if the token is invalid
+    pub fn get_token(&self) -> Result<&Token, ()>{
+        if !self.token.is_valid() {
+            return Err(());
+        }
+
+        Ok(&self.token)
+    }
+}
+
+impl Into<Token> for TokenGuard {
+    fn into(self) -> Token {
+        self.token
     }
 }
 
@@ -75,8 +110,8 @@ mod test {
             let mut token = Token::new(
                 String::new(),
                 TokenPrupose::Nothing,
-                Instant::now(),
-                Duration::from_secs(10),
+                chrono::Utc::now().timestamp_millis(),
+                10_000,
             );
             assert!(token.is_valid());
 
@@ -91,8 +126,8 @@ mod test {
             let invalid_token = Token::new(
                 String::new(),
                 TokenPrupose::Nothing,
-                Instant::now() - Duration::from_secs(20),
-                Duration::from_secs(10),
+                chrono::Utc::now().timestamp_millis() - 20_000,
+                10_000,
             );
             // Should fail because token has expired
             assert!(!invalid_token.is_valid());
@@ -102,8 +137,8 @@ mod test {
             let invalid_token = Token::new(
                 String::new(),
                 TokenPrupose::Nothing,
-                Instant::now() + Duration::from_secs(20),
-                Duration::from_secs(10),
+                chrono::Utc::now().timestamp_millis() + 20_000,
+                10_000,
             );
 
             // Should fail because token was emitted in the future
