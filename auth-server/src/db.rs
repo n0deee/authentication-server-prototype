@@ -1,5 +1,5 @@
 use chrono::Utc;
-use serde::{de::value::Error, Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 pub type UserID = u64;
 pub type TokenKey = String;

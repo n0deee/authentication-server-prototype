@@ -65,20 +65,23 @@ fn handle_connection(mut connection: Connection, token_manager: &mut MemoryToken
 
                 println!("Authenticating...");
                 let token = auth(credentials).unwrap();
-                let token = token_manager.insert(token);
+                let token_insertion_result = token_manager.insert(token);
 
-                if let Ok(token) = token {
+                if let Ok(token) = token_insertion_result {
                     if let Some(_invalidation_readon) = token.is_invalid() {
                         println!("ERROR: Not Authenticated! Token is invalid!");
                         connection.write(&[0; 1]).unwrap();
+                        break;
                     }
 
                     let decoded_token = bincode::serialize::<Token>(&token).unwrap();
                     connection.write(&decoded_token).unwrap();
                     println!("Authenticated!");
+                    break;
                 } else {
                     println!("ERROR: Not Authenticated! Token insertion error!");
                     connection.write(&[0; 1]).unwrap();
+                    break;
                 }
             }
             Err(e) => {
@@ -86,11 +89,11 @@ fn handle_connection(mut connection: Connection, token_manager: &mut MemoryToken
                 println!(" - Code: {}", e.kind().to_string());
                 println!(" - Message: {}", e.to_string());
                 println!("Disconnecting...");
-                drop(connection);
                 break;
             }
         }
     }
+    drop(connection);
 }
 
 fn auth(credentials: Credentials) -> Result<Token, ()> {
