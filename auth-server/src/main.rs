@@ -8,7 +8,6 @@ use auth_server::{
 
 const LISTEN_IP_ADDR: &str = "127.0.0.1:1667";
 
-// TODO: Implement MemoryTokenManager
 fn main() {
     let listener = TcpListener::bind(LISTEN_IP_ADDR).expect("Cannot create the TCPListener");
     let mut token_manager = MemoryTokenManager::new();
