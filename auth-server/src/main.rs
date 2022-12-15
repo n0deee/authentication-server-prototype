@@ -1,10 +1,8 @@
 use std::{io::Read, io::Write, net::TcpListener};
 
+use auth_lib::db::{Token, TokenPrupose};
 use auth_lib::net::packets::Credentials;
-use auth_server::{
-    db::{MemoryTokenManager, Token, TokenPrupose},
-    net::Connection,
-};
+use auth_server::{db::MemoryTokenManager, net::Connection};
 
 const LISTEN_IP_ADDR: &str = "127.0.0.1:1667";
 
