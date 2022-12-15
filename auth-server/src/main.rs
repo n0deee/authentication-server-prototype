@@ -2,7 +2,7 @@ use std::{io::Read, io::Write, net::TcpListener};
 
 use auth_lib::net::packets::Credentials;
 use auth_server::{
-    db::{MemoryTokenManager, Token, TokenGuard, TokenPrupose},
+    db::{MemoryTokenManager, Token, TokenPrupose},
     net::Connection,
 };
 
@@ -11,6 +11,7 @@ const LISTEN_IP_ADDR: &str = "127.0.0.1:1667";
 // TODO: Implement MemoryTokenManager
 fn main() {
     let listener = TcpListener::bind(LISTEN_IP_ADDR).expect("Cannot create the TCPListener");
+    let mut token_manager = MemoryTokenManager::new();
 
     println!("Server online!");
 
@@ -39,12 +40,12 @@ fn main() {
             continue;
         }
 
-        handle_connection(connection);
+        handle_connection(connection, &mut token_manager);
         println!("Connection handled!");
     }
 }
 
-fn handle_connection(mut connection: Connection) {
+fn handle_connection(mut connection: Connection, token_manager: &mut MemoryTokenManager) {
     loop {
         let mut read_buffer = [0; 1024];
 
@@ -60,17 +61,23 @@ fn handle_connection(mut connection: Connection) {
                     bincode::deserialize::<Credentials>(&read_buffer).unwrap();
 
                 // Autentication
-                println!("Authenticating...");
-                let token_guard = auth(credentials).unwrap();
+                // TODO: Refactoration. This thing is terrible to read
 
-                // Response
-                if let Ok(token) = token_guard.get_token() {
+                println!("Authenticating...");
+                let token = auth(credentials).unwrap();
+                let token = token_manager.insert(token);
+
+                if let Ok(token) = token {
+                    if let Some(_invalidation_readon) = token.is_invalid() {
+                        println!("ERROR: Not Authenticated! Token is invalid!");
+                        connection.write(&[0; 1]).unwrap();
+                    }
 
                     let decoded_token = bincode::serialize::<Token>(&token).unwrap();
                     connection.write(&decoded_token).unwrap();
                     println!("Authenticated!");
                 } else {
-                    println!("ERROR: Not Authenticated! Token is invalid!");
+                    println!("ERROR: Not Authenticated! Token insertion error!");
                     connection.write(&[0; 1]).unwrap();
                 }
             }
@@ -86,7 +93,7 @@ fn handle_connection(mut connection: Connection) {
     }
 }
 
-fn auth(credentials: Credentials) -> Result<TokenGuard, ()> {
+fn auth(credentials: Credentials) -> Result<Token, ()> {
     use sha2::{Digest, Sha512};
 
     let mut hasher = Sha512::new();
@@ -104,6 +111,5 @@ fn auth(credentials: Credentials) -> Result<TokenGuard, ()> {
         60_000,
     );
 
-    let token_guard = TokenGuard::new(token);
-    Ok(token_guard)
+    Ok(token)
 }

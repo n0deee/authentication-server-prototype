@@ -47,10 +47,6 @@ pub struct Token {
     invalidated: bool,
 }
 
-pub struct TokenGuard {
-    token: Token,
-}
-
 pub struct MemoryTokenManager {
     tokens: Vec<Token>,
 }
@@ -97,32 +93,12 @@ impl Token {
     }
 }
 
-impl TokenGuard {
-    pub fn new(token: Token) -> TokenGuard {
-        TokenGuard { token }
-    }
-
-    /// Returns Ok(_) if the token is valid and Err(_) if the token is invalid
-    pub fn get_token(&self) -> Result<&Token, TokenInvalidationReason> {
-        if let Some(invalidation_reason) = self.token.is_invalid() {
-            return Err(invalidation_reason);
-        }
-
-        Ok(&self.token)
-    }
-}
-impl Into<Token> for TokenGuard {
-    fn into(self) -> Token {
-        self.token
-    }
-}
-
 impl MemoryTokenManager {
     pub fn new() -> MemoryTokenManager {
         MemoryTokenManager { tokens: vec![] }
     }
 
-    fn insert(&mut self, token: Token) -> Result<&Token, TokenInsertionError> {
+    pub fn insert(&mut self, token: Token) -> Result<&Token, TokenInsertionError> {
         if self.key_exists(&token.key) {
             return Err(TokenInsertionError::AlreadyExists);
         }
@@ -133,7 +109,7 @@ impl MemoryTokenManager {
     }
 
     // TODO: Otimize
-    fn key_exists(&self, key: &TokenKey) -> bool {
+    pub fn key_exists(&self, key: &TokenKey) -> bool {
         for token in self.tokens.iter() {
             if token.key == *key {
                 return true;
@@ -143,7 +119,7 @@ impl MemoryTokenManager {
         false
     }
 
-    fn get_token_by_key(&self, key: &TokenKey) -> Option<&Token> {
+    pub fn get_token_by_key(&self, key: &TokenKey) -> Option<&Token> {
         for token in self.tokens.iter() {
             if token.key == *key {
                 return Some(&token);
