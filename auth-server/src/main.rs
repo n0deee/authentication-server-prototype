@@ -2,12 +2,13 @@ use std::{io::Read, io::Write, net::TcpListener};
 
 use auth_lib::net::packets::Credentials;
 use auth_server::{
+    db::{MemoryTokenManager, Token, TokenGuard, TokenPrupose},
     net::Connection,
-    test_database::{Token, TokenGuard, TokenPrupose},
 };
 
 const LISTEN_IP_ADDR: &str = "127.0.0.1:1667";
 
+// TODO: Implement MemoryTokenManager
 fn main() {
     let listener = TcpListener::bind(LISTEN_IP_ADDR).expect("Cannot create the TCPListener");
 
@@ -64,11 +65,11 @@ fn handle_connection(mut connection: Connection) {
 
                 // Response
                 if let Ok(token) = token_guard.get_token() {
+
                     let decoded_token = bincode::serialize::<Token>(&token).unwrap();
                     connection.write(&decoded_token).unwrap();
                     println!("Authenticated!");
-                }
-                else {
+                } else {
                     println!("ERROR: Not Authenticated! Token is invalid!");
                     connection.write(&[0; 1]).unwrap();
                 }
@@ -102,7 +103,7 @@ fn auth(credentials: Credentials) -> Result<TokenGuard, ()> {
         chrono::Utc::now().timestamp_millis(),
         60_000,
     );
-    let token_guard = TokenGuard::new(token);
 
+    let token_guard = TokenGuard::new(token);
     Ok(token_guard)
 }
